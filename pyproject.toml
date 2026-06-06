@@ -1,0 +1,14 @@
+[project]
+name = "chaoxing-agent"
+version = "0.1.0"
+description = "Windows 本地自动化答题工具 - 视觉模型解析 + 文本模型作答 + 本地点击控制"
+requires-python = ">=3.10"
+dependencies = [
+    "pywin32>=306",
+    "psutil>=5.9.0",
+    "Pillow>=10.0.0",
+    "opencv-python>=4.8.0",
+    "numpy>=1.24.0",
+    "requests>=2.31.0",
+    "pydantic>=2.0.0",
+]

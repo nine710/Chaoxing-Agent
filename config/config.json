@@ -1,0 +1,57 @@
+{
+  "target": {
+    "process_name": "",
+    "pid": null,
+    "selected_hwnd": null,
+    "window_title": "",
+    "client_rect": [0, 0, 0, 0]
+  },
+  "viewport": {
+    "lock_window_size_after_calibration": true,
+    "phone_viewport_in_client": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "phone_viewport_ratio": {
+      "x": 0.0,
+      "y": 0.0,
+      "width": 0.0,
+      "height": 0.0
+    }
+  },
+  "timing": {
+    "between_multi_select_clicks": 0.2,
+    "before_click_next": 0.2,
+    "after_click_next": 0.5,
+    "extra_wait_if_page_not_changed": 0.5,
+    "max_page_change_wait": 3.0
+  },
+  "thresholds": {
+    "vision_text_confidence": 0.75,
+    "vision_layout_confidence": 0.75,
+    "solver_confidence": 0.70,
+    "page_change_pixel_ratio": 0.03,
+    "window_size_change_ratio": 0.05
+  },
+  "page_change": {
+    "compare_region_ratio": {
+      "x1": 0.0,
+      "y1": 0.08,
+      "x2": 1.0,
+      "y2": 0.75
+    },
+    "compare_resize": [200, 200]
+  },
+  "runtime": {
+    "max_steps": 200,
+    "stop_on_submit": true,
+    "pause_on_popup": true,
+    "pause_on_unknown": true,
+    "save_trace": true,
+    "loading_retry_max": 3,
+    "loading_retry_delay": 1.0,
+    "max_consecutive_errors": 3
+  }
+}

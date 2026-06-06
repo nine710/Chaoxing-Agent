@@ -1,0 +1,32 @@
+你正在解析一张手机屏幕截图。
+这张图只包含手机画面，不包含 Windows 桌面。
+请提取当前页面结构，用严格 JSON 返回。
+
+所有矩形坐标必须基于当前截图的像素坐标 (0,0 是图片左上角)。
+不要返回屏幕绝对坐标。
+
+JSON 格式必须包含以下字段:
+{
+  "page_state": "question|submit|popup|loading|finished|unknown",
+  "question_type": "single_choice|multiple_choice|true_false|fill_blank|unknown",
+  "question_text": "题干文本",
+  "options": [
+    {"key": "A", "text": "选项文本", "box": [x1, y1, x2, y2]},
+    ...
+  ],
+  "buttons": {
+    "previous": {"visible": bool, "text": "按钮文本", "box": [x1,y1,x2,y2]|null},
+    "next": {"visible": bool, "text": "按钮文本", "box": [x1,y1,x2,y2]|null},
+    "submit": {"visible": bool, "text": "按钮文本", "box": [x1,y1,x2,y2]|null}
+  },
+  "popup": {"visible": bool, "text": "弹窗文字", "buttons": []},
+  "confidence": {"text": 0.0-1.0, "layout": 0.0-1.0}
+}
+
+规则:
+- 不要输出 Markdown
+- 不要输出解释文字
+- 不要替用户做题
+- 不要猜测无法看清的内容
+- 如果无法识别，page_state 返回 "unknown"
+- box 坐标基于本张截图的像素尺寸，不要使用屏幕坐标

@@ -1,0 +1,60 @@
+{
+  "model_services": {
+    "vision": {
+      "1": {
+        "name": "OpenAI Compatible Vision",
+        "api_type": "openai",
+        "base_url": "https://your-endpoint/v1",
+        "api_key_env": "VISION_API_KEY",
+        "model_id": "your-vision-model",
+        "supports_image": true
+      },
+      "2": {
+        "name": "Google Gemini Vision",
+        "api_type": "google",
+        "base_url": "https://generativelanguage.googleapis.com",
+        "api_key_env": "GOOGLE_API_KEY",
+        "model_id": "gemini-2.5-flash",
+        "supports_image": true
+      },
+      "3": {
+        "name": "Local Vision",
+        "api_type": "openai",
+        "base_url": "http://127.0.0.1:8000/v1",
+        "api_key_env": "LOCAL_VISION_API_KEY",
+        "model_id": "local-vision",
+        "supports_image": true
+      }
+    },
+    "solver": {
+      "1": {
+        "name": "OpenAI Compatible Solver",
+        "api_type": "openai",
+        "base_url": "https://your-endpoint/v1",
+        "api_key_env": "SOLVER_API_KEY",
+        "model_id": "your-text-model",
+        "supports_image": false
+      },
+      "2": {
+        "name": "Google Gemini Solver",
+        "api_type": "google",
+        "base_url": "https://generativelanguage.googleapis.com",
+        "api_key_env": "GOOGLE_API_KEY",
+        "model_id": "gemini-2.5-flash",
+        "supports_image": false
+      },
+      "3": {
+        "name": "Local Solver",
+        "api_type": "openai",
+        "base_url": "http://127.0.0.1:8001/v1",
+        "api_key_env": "LOCAL_SOLVER_API_KEY",
+        "model_id": "local-solver",
+        "supports_image": false
+      }
+    }
+  },
+  "selected": {
+    "vision_model": "1",
+    "solver_model": "1"
+  }
+}

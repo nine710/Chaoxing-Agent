@@ -1,0 +1,11 @@
+.claude/
+.venv/
+trace/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.png
+test_*.png
