@@ -104,6 +104,8 @@ class StateMachine:
             self.trace_logger.save_stop("用户中断 (Ctrl+C)")
 
         print(f"\n处理完成。共处理 {self.step} 题。")
+        if self.step >= self.max_steps:
+            self.trace_logger.save_stop("max_steps")
         print(f"Trace 目录: {self.trace_logger.session_dir}")
 
     def _process_one_step(self) -> StepResult:
@@ -133,6 +135,9 @@ class StateMachine:
         # Hard safety boundary: submit detection always stops immediately.
         if vision.page_state == "submit" or vision.buttons.submit.visible:
             return StepResult(should_stop=True, stop_reason="submit_detected")
+
+        if vision.page_state == "finished":
+            return StepResult(should_stop=True, stop_reason="finished")
 
         if vision.popup.visible and self.pause_on_popup:
             return self._pause_save(screenshot, vision, None, "检测到弹窗，请手动处理后按 Enter 继续")

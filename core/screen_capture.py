@@ -15,34 +15,42 @@ def capture_client_area(hwnd: int) -> Image.Image:
     if width <= 0 or height <= 0:
         raise RuntimeError(f"窗口客户区尺寸无效: {width}x{height}")
 
-    hwnd_dc = win32gui.GetDC(hwnd)
-    mfc_dc = win32ui.CreateDCFromHandle(hwnd_dc)
-    save_dc = mfc_dc.CreateCompatibleDC()
+    hwnd_dc = None
+    mfc_dc = None
+    save_dc = None
+    bitmap = None
 
-    bitmap = win32ui.CreateBitmap()
-    bitmap.CreateCompatibleBitmap(mfc_dc, width, height)
-    save_dc.SelectObject(bitmap)
+    try:
+        hwnd_dc = win32gui.GetDC(hwnd)
+        mfc_dc = win32ui.CreateDCFromHandle(hwnd_dc)
+        save_dc = mfc_dc.CreateCompatibleDC()
 
-    save_dc.BitBlt((0, 0), (width, height), mfc_dc, (0, 0), win32con.SRCCOPY)
+        bitmap = win32ui.CreateBitmap()
+        bitmap.CreateCompatibleBitmap(mfc_dc, width, height)
+        save_dc.SelectObject(bitmap)
 
-    bmp_info = bitmap.GetInfo()
-    bmp_bits = bitmap.GetBitmapBits(True)
-    img = Image.frombuffer(
-        "RGB",
-        (bmp_info["bmWidth"], bmp_info["bmHeight"]),
-        bmp_bits,
-        "raw",
-        "BGRX",
-        0,
-        1,
-    )
+        save_dc.BitBlt((0, 0), (width, height), mfc_dc, (0, 0), win32con.SRCCOPY)
 
-    win32gui.DeleteObject(bitmap.GetHandle())
-    save_dc.DeleteDC()
-    mfc_dc.DeleteDC()
-    win32gui.ReleaseDC(hwnd, hwnd_dc)
-
-    return img
+        bmp_info = bitmap.GetInfo()
+        bmp_bits = bitmap.GetBitmapBits(True)
+        return Image.frombuffer(
+            "RGB",
+            (bmp_info["bmWidth"], bmp_info["bmHeight"]),
+            bmp_bits,
+            "raw",
+            "BGRX",
+            0,
+            1,
+        )
+    finally:
+        if bitmap is not None:
+            win32gui.DeleteObject(bitmap.GetHandle())
+        if save_dc is not None:
+            save_dc.DeleteDC()
+        if mfc_dc is not None:
+            mfc_dc.DeleteDC()
+        if hwnd_dc is not None:
+            win32gui.ReleaseDC(hwnd, hwnd_dc)
 
 
 def capture_phone_screen(hwnd: int, viewport: dict) -> Image.Image:
