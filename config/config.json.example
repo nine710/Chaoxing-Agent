@@ -1,29 +1,24 @@
 {
   "target": {
-    "process_name": "vivoScreen.exe",
-    "pid": 26212,
-    "selected_hwnd": 11209946,
-    "window_title": "手机投屏",
-    "client_rect": [
-      2069,
-      125,
-      2456,
-      1049
-    ]
+    "process_name": "",
+    "pid": null,
+    "selected_hwnd": null,
+    "window_title": "",
+    "client_rect": [0, 0, 0, 0]
   },
   "viewport": {
     "lock_window_size_after_calibration": true,
     "phone_viewport_in_client": {
-      "x": 2,
-      "y": 119,
-      "width": 380,
-      "height": 770
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
     },
     "phone_viewport_ratio": {
-      "x": 0.00516795865633075,
-      "y": 0.12878787878787878,
-      "width": 0.9819121447028424,
-      "height": 0.8333333333333334
+      "x": 0.0,
+      "y": 0.0,
+      "width": 0.0,
+      "height": 0.0
     }
   },
   "timing": {
@@ -36,7 +31,7 @@
   "thresholds": {
     "vision_text_confidence": 0.75,
     "vision_layout_confidence": 0.75,
-    "solver_confidence": 0.7,
+    "solver_confidence": 0.70,
     "page_change_pixel_ratio": 0.03,
     "window_size_change_ratio": 0.05
   },
@@ -47,10 +42,7 @@
       "x2": 1.0,
       "y2": 0.75
     },
-    "compare_resize": [
-      200,
-      200
-    ]
+    "compare_resize": [200, 200]
   },
   "runtime": {
     "max_steps": 200,

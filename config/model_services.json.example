@@ -1,9 +1,9 @@
 {
   "vision": {
     "api_type": "openai",
-    "base_url": "https://token-plan-cn.xiaomimimo.com/v1",
-    "api_key_env": "VISION_API_KEY",
-    "model_id": "mimo-v2.5",
+    "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "api_key_env": "GOOGLE_API_KEY",
+    "model_id": "gemini-2.5-flash",
     "use_response_format": false,
     "max_tokens": 3000,
     "temperature": 0,
@@ -16,9 +16,9 @@
   },
   "solver": {
     "api_type": "openai",
-    "base_url": "https://token-plan-cn.xiaomimimo.com/v1",
-    "api_key_env": "SOLVER_API_KEY",
-    "model_id": "mimo-v2.5-pro",
+    "base_url": "https://api.deepseek.com",
+    "api_key_env": "DEEPSEEK_API_KEY",
+    "model_id": "deepseek-chat",
     "use_response_format": true,
     "max_tokens": 2000,
     "temperature": 0,
