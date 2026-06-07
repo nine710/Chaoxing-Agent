@@ -1,0 +1,1 @@
+"""Core business logic (window binding, viewport, capture, click, state machine)."""

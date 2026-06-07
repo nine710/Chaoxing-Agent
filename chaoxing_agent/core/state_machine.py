@@ -5,12 +5,12 @@ from dataclasses import dataclass, field
 
 from PIL import Image
 
-from core.click_executor import click_next_button, click_options
-from core.coordinate_mapper import CoordinateMapper
-from core.errors import FatalStopError, PauseRequiredError, RecoverableError
-from core.page_change_detector import wait_for_change
-from core.screen_capture import capture_phone_screen, check_window_alive, check_window_size_unchanged
-from core.trace_logger import TraceLogger
+from chaoxing_agent.core.click_executor import click_next_button, click_options
+from chaoxing_agent.core.coordinate_mapper import CoordinateMapper
+from chaoxing_agent.core.errors import FatalStopError, PauseRequiredError, RecoverableError
+from chaoxing_agent.core.page_change_detector import wait_for_change
+from chaoxing_agent.core.screen_capture import capture_phone_screen, check_window_alive, check_window_size_unchanged
+from chaoxing_agent.core.trace_logger import TraceLogger
 from models.model_config import get_solver_config, get_vision_config
 from models.text_solver import solve as text_solve
 from models.vision_parser import parse as vision_parse

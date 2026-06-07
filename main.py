@@ -2,6 +2,17 @@
 
 使用:
     uv run python main.py
+    uv run python main.py --init-config     # 强制从 example 重新生成 config.json / model_services.json
+    uv run python main.py --init-env        # 重新生成 config/.env.example
+
+环境配置:
+    config/.env 仅用于模型服务相关项:
+      - 模型 API key（由 model_services.json 的 api_key_env 指向）
+      - 选中的模型：CHAOXING_MODEL_VISION_KEY / CHAOXING_MODEL_SOLVER_KEY
+      - provider 字段覆盖：CHAOXING_VISION_<KEY>_<FIELD> / CHAOXING_SOLVER_<KEY>_<FIELD>
+    其它运行时/标定参数在 config/config.json 中维护。
+    真实 config.json / model_services.json 已被 .gitignore 排除，
+    首次运行会自动从 *.example 复制。
 
 流程:
     1. 输入进程名或 PID → 绑定窗口
@@ -14,10 +25,12 @@ import json
 import sys
 from pathlib import Path
 
-from core.errors import FatalStopError
-from core.state_machine import StateMachine
-from core.viewport_selector import select as select_viewport_fn
-from core.window_selector import select as select_window_fn
+from chaoxing_agent.core.config_init import ensure_config_files, init_config_files, init_env_example
+from chaoxing_agent.core.env_settings import apply_overrides
+from chaoxing_agent.core.errors import FatalStopError
+from chaoxing_agent.core.state_machine import StateMachine
+from chaoxing_agent.core.viewport_selector import select as select_viewport_fn
+from chaoxing_agent.core.window_selector import select as select_window_fn
 from models.model_config import load_model_services
 
 
@@ -90,6 +103,51 @@ def _save_config(config: dict):
         json.dump(config, f, ensure_ascii=False, indent=2)
 
 
+def _resolve_preconfigured_target(target: dict) -> dict | None:
+    """若 config.json 里的 target 已预填 process_name / pid / hwnd，则直接绑定窗口。
+
+    返回值结构与 config["target"] 一致（包含 selected_hwnd 等），
+    绑定失败返回 None（调用方回落到交互式选择）。
+    """
+    pid = target.get("pid")
+    process_name = (target.get("process_name") or "").strip()
+    hwnd = target.get("selected_hwnd")
+
+    # 必须有 pid 或 process_name；纯 hwnd 仍走"复用 hwnd"分支
+    if not (pid or process_name):
+        return None
+
+    # 把所有非空信息合成一个选择串
+    if pid and process_name:
+        user_input = str(pid)
+    elif pid:
+        user_input = str(pid)
+    else:
+        user_input = process_name
+
+    try:
+        win_info = select_window_fn(user_input)
+    except SystemExit as e:
+        print(f"[Target] 预配置 {user_input!r} 未找到可见窗口: {e}")
+        print("[Target] 将回落到交互式选择。")
+        return None
+
+    # 如果用户额外指定了 hwnd，校验匹配；不匹配则警告但继续
+    if hwnd and win_info.hwnd != hwnd:
+        print(
+            f"[Target] 警告: config.json 指定的 hwnd={hwnd} 与实际找到的 hwnd={win_info.hwnd} 不一致，"
+            f"使用实际找到的窗口。"
+        )
+
+    return {
+        "process_name": win_info.process_name,
+        "pid": win_info.pid,
+        "selected_hwnd": win_info.hwnd,
+        "window_title": win_info.window_title,
+        "client_rect": list(win_info.client_rect),
+    }
+
+
 def _save_window_to_config(config: dict, win_info):
     """将窗口信息写入 config['target']。"""
     config["target"] = {
@@ -123,28 +181,68 @@ def _save_viewport_to_config(config: dict, vp_info):
 
 
 def main():
+    args = sys.argv[1:]
+    if "--init-env" in args:
+        out = init_env_example()
+        print(f"已生成 env 模板: {out}")
+        return
+    if "--init-config" in args:
+        pairs = init_config_files(force=True)
+        for src, dst in pairs:
+            print(f"已生成: {dst}  <-  {src}")
+        return
+
     print("=" * 50)
     print("ChaoxingAgent v1")
     print("Windows 本地自动化答题工具")
     print("=" * 50)
 
+    initialized = ensure_config_files()
+    for src, dst in initialized:
+        print(f"\n[Init] 已从 example 初始化: {dst}")
+        print(f"       模板: {src}")
+    if initialized:
+        print("       请按需编辑后再运行。\n")
+
     config = _load_or_create_config()
     model_services = load_model_services()
 
+    loaded_env, n_models = apply_overrides(model_services)
+    if loaded_env:
+        print(f"\n[Env] 加载 config/.env: {loaded_env} 条")
+    if n_models:
+        print(f"[Env] CHAOXING_* model_services 覆盖: {n_models} 项")
+
     target = config.get("target", {})
-    if target.get("selected_hwnd"):
+
+    # 1) 优先看 config.json 里的 target 设置（用户预填的进程名 / PID / hwnd）
+    preconfigured = _resolve_preconfigured_target(target)
+    if preconfigured is not None:
+        # 已配置：直接绑定，不再交互
+        if preconfigured.get("selected_hwnd") and preconfigured.get("process_name"):
+            print(
+                f"\n[Target] 来自 config.json: hwnd={preconfigured['selected_hwnd']} "
+                f"pid={preconfigured.get('pid')} process={preconfigured.get('process_name')}"
+            )
+        # 关键：把预配置结果立刻写盘，后续 viewport 写盘时不能把它覆盖回 null。
+        config["target"] = preconfigured
+        _save_config(config)
+        target = preconfigured
+    # 2) 已有 selected_hwnd（程序之前回写或用户在 config.json 手动设置）—— 仍需问是否复用
+    elif target.get("selected_hwnd"):
         print(f"\n已有窗口绑定: hwnd={target['selected_hwnd']} title='{target.get('window_title', '')}'")
         reuse = input("是否使用已有绑定？(y/n，n 则重新选择): ").strip().lower()
         if reuse != "y":
             target = {}
-
+    # 3) 既没预设也没 hwnd：交互式输入
     if not target.get("selected_hwnd"):
-        user_input = input("\n请输入目标进程名或 PID: ").strip()
+        user_input = input("\n请输入目标进程名或 PID（也可先在 config.json 里设置 target.process_name / pid）: ").strip()
         if not user_input:
             print("未输入，退出。")
             return
         win_info = select_window_fn(user_input)
         _save_window_to_config(config, win_info)
+        config = _load_or_create_config()
         target = config["target"]
 
     viewport = config.get("viewport", {})
@@ -156,7 +254,7 @@ def main():
             viewport = {}
 
     if not viewport.get("phone_viewport_in_client", {}).get("width", 0):
-        from core.window_selector import WindowInfo
+        from chaoxing_agent.core.window_selector import WindowInfo
 
         client_rect = target.get("client_rect", [0, 0, 0, 0])
         win_info = WindowInfo(

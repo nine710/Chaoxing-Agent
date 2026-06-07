@@ -4,7 +4,7 @@ import ctypes
 import time
 from ctypes import wintypes
 
-from core.coordinate_mapper import CoordinateMapper
+from chaoxing_agent.core.coordinate_mapper import CoordinateMapper
 
 INPUT_MOUSE = 0
 MOUSEEVENTF_MOVE = 0x0001

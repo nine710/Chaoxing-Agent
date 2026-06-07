@@ -6,8 +6,8 @@ import tkinter as tk
 
 from PIL import Image, ImageTk
 
-from core.screen_capture import capture_client_area
-from core.window_selector import WindowInfo
+from chaoxing_agent.core.screen_capture import capture_client_area
+from chaoxing_agent.core.window_selector import WindowInfo
 
 
 @dataclass
