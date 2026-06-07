@@ -359,9 +359,10 @@ def _get_model_services(ctx: HandlerContext) -> Handler:
 def _switch_model(ctx: HandlerContext) -> Handler:
     """切换选定模型角色（vision / solver）到指定 provider key。
 
-    兼容两种 model_services.json 结构：
-    - 单 provider（flat）：{"vision": {"api_type": "openai", ...}}
-    - 多 provider：{"vision": {"key1": {"api_type": "openai", ...}, "key2": ...}}
+    仅多 provider registry 结构支持切换：
+      {"vision": {"key1": {...}, "key2": ...}, "selected": {"vision_model": "key1"}}
+
+    v2 单 provider（flat）结构没有可切换 key，必须显式拒绝，避免返回假成功。
     """
     async def handler(params: dict) -> dict:
         role = params["role"]
@@ -372,14 +373,20 @@ def _switch_model(ctx: HandlerContext) -> Handler:
             raise ValueError(f"未知角色: {role}，可用角色: {list(services.keys())}")
 
         section = services[role]
-        if not (isinstance(section, dict) and "api_type" in section):
-            # 多 provider 结构 — 确保 key 存在
-            if key not in section:
-                raise ValueError(f"角色 {role} 下无此 provider key: {key}")
+        if isinstance(section, dict) and "api_type" in section:
+            raise ValueError(
+                f"角色 {role} 当前是单 provider 结构，不能通过 key 切换；"
+                "请编辑 config/model_services.json 或使用 CHAOXING_<ROLE>_<FIELD> 覆盖。"
+            )
+        if not isinstance(section, dict):
+            raise ValueError(f"角色 {role} 配置必须是 provider dict")
+        if key not in section:
+            raise ValueError(f"角色 {role} 下无此 provider key: {key}")
 
-        # 持久化 selected 选择
-        if "selected" not in services:
+        # 持久化 selected 选择；同时写新字段和旧字段，兼容已有调用。
+        if "selected" not in services or not isinstance(services["selected"], dict):
             services["selected"] = {}
+        services["selected"][f"{role}_model"] = key
         services["selected"][role] = key
         _write_model_services(services)
 
@@ -426,12 +433,10 @@ def _test_model(ctx: HandlerContext) -> Handler:
 
         t0 = time.time()
         try:
-            # 发一个最小请求测试连通性
-            resp = await asyncio.to_thread(
-                client.client.chat.completions.create,
-                model=cfg.model_id,
-                messages=[{"role": "user", "content": "Hi"}],
-                max_tokens=1,
+            # 走 OpenAIClient 公开契约；不要越过 wrapper 访问内部 SDK 属性。
+            await asyncio.to_thread(
+                client.chat,
+                [{"role": "user", "content": "Hi"}],
             )
             latency = int((time.time() - t0) * 1000)
             return {"ok": True, "latency_ms": latency, "error": None}

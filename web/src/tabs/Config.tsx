@@ -4,8 +4,7 @@ import { api } from "../lib/tauri-bridge";
 type Config = {
   thresholds?: { vision_text_confidence?: number; vision_layout_confidence?: number; solver_confidence?: number };
   timing?: { between_multi_select_clicks?: number; before_click_next?: number; after_click_next?: number };
-  runtime?: { max_steps?: number; stop_on_submit?: boolean; pause_on_popup?: boolean; pause_on_unknown?: boolean };
-  selected?: { vision_model?: string; solver_model?: string };
+  runtime?: { max_steps?: number; pause_on_popup?: boolean; pause_on_unknown?: boolean };
 };
 
 type ModelService = {
@@ -16,6 +15,7 @@ type ModelService = {
 };
 
 type ModelServices = {
+  selected?: { vision_model?: string; solver_model?: string; vision?: string; solver?: string };
   vision?: Record<string, ModelService> | ModelService;
   solver?: Record<string, ModelService> | ModelService;
 };
@@ -24,10 +24,12 @@ function isModelService(section: Record<string, ModelService> | ModelService): s
   return typeof (section as ModelService).api_type === "string";
 }
 
-function pickService(section: Record<string, ModelService> | ModelService | undefined, key?: string): ModelService | undefined {
-  if (!section) return undefined;
-  if (isModelService(section)) return section;
-  return section[key ?? ""];
+function activeModel(section: Record<string, ModelService> | ModelService | undefined, selectedKey?: string): { name: string; service?: ModelService } {
+  if (!section) return { name: "未配置" };
+  if (isModelService(section)) return { name: section.model_id ?? "单 provider", service: section };
+  const keys = Object.keys(section);
+  const key = selectedKey && section[selectedKey] ? selectedKey : keys[0];
+  return { name: key ?? "未配置", service: key ? section[key] : undefined };
 }
 
 export function Config() {
@@ -106,10 +108,10 @@ export function Config() {
   const t = cfg.thresholds ?? {};
   const ti = cfg.timing ?? {};
   const r = cfg.runtime ?? {};
-  const sel = cfg.selected ?? {};
+  const selected = services?.selected ?? {};
 
-  const visionSvc = pickService(services?.vision, sel.vision_model);
-  const solverSvc = pickService(services?.solver, sel.solver_model);
+  const vision = activeModel(services?.vision, selected.vision_model ?? selected.vision);
+  const solver = activeModel(services?.solver, selected.solver_model ?? selected.solver);
 
   return (
     <div className="flex flex-col h-full">
@@ -127,11 +129,11 @@ export function Config() {
 
             <ModelRow
               role="vision"
-              name={sel.vision_model ?? "未选"}
-              meta={visionSvc ? `${visionSvc.api_type} / ${visionSvc.model_id ?? "?"}` : "未配置"}
+              name={vision.name}
+              meta={vision.service ? `${vision.service.api_type} / ${vision.service.model_id ?? "?"}` : "未配置"}
               onTest={async () => {
                 try {
-                  const r = await api.testModel("vision", sel.vision_model ?? "");
+                  const r = await api.testModel("vision", vision.name === "未配置" ? "" : vision.name);
                   setToast({ kind: r.ok ? "ok" : "err", text: r.ok ? `连通 ${r.latency_ms}ms` : `失败：${r.error}` });
                   setTimeout(() => setToast(null), 3000);
                 } catch (e) {
@@ -142,11 +144,11 @@ export function Config() {
             <div className="h-2" />
             <ModelRow
               role="solver"
-              name={sel.solver_model ?? "未选"}
-              meta={solverSvc ? `${solverSvc.api_type} / ${solverSvc.model_id ?? "?"}` : "未配置"}
+              name={solver.name}
+              meta={solver.service ? `${solver.service.api_type} / ${solver.service.model_id ?? "?"}` : "未配置"}
               onTest={async () => {
                 try {
-                  const r = await api.testModel("solver", sel.solver_model ?? "");
+                  const r = await api.testModel("solver", solver.name === "未配置" ? "" : solver.name);
                   setToast({ kind: r.ok ? "ok" : "err", text: r.ok ? `连通 ${r.latency_ms}ms` : `失败：${r.error}` });
                   setTimeout(() => setToast(null), 3000);
                 } catch (e) {
@@ -185,11 +187,9 @@ export function Config() {
               <span className="font-mono text-[11px] text-dim">行为</span>
             </div>
             <InputField label="max_steps" value={r.max_steps ?? 200} onChange={(v) => setRuntime("max_steps", v)} mono={false} />
-            <ToggleField
-              label="stop_on_submit"
-              sub="检测到交卷按钮时停止"
-              on={r.stop_on_submit ?? true}
-              onToggle={(v) => setRuntime("stop_on_submit", v)}
+            <ReadOnlyField
+              label="submit safety"
+              sub="检测到交卷按钮时始终停止（不可关闭的安全边界）"
             />
             <ToggleField
               label="pause_on_popup"
@@ -221,7 +221,7 @@ export function Config() {
         <div className="sticky bottom-0 mx-8 mb-4 bg-surface2 border border-line rounded-lg p-2.5 px-4 flex items-center gap-3">
           <div className="text-[12px] text-muted flex-1">
             修改未保存。
-            <span className="font-mono text-fg">热更字段：timing, thresholds, runtime, selected.*</span>
+            <span className="font-mono text-fg">热更字段：timing, thresholds, runtime</span>
             <span className="text-warn ml-2">窗口/标定变更需重启会话</span>
           </div>
           <button
@@ -298,6 +298,20 @@ function InputField({ label, value, onChange, suffix, mono = true }: { label: st
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
         className={`w-full h-8 px-2.5 ${mono ? "font-mono" : ""} text-[12px] bg-surface1 text-fg border border-line rounded focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-dim`}
       />
+    </div>
+  );
+}
+
+function ReadOnlyField({ label, sub }: { label: string; sub: string }) {
+  return (
+    <div className="flex items-center justify-between py-2 border-t border-line first:border-t-0">
+      <div>
+        <div className="text-[12.5px] text-fg">{label}</div>
+        <div className="font-mono text-[11px] text-dim mt-0.5">{sub}</div>
+      </div>
+      <span className="inline-flex items-center px-1.5 py-0.5 bg-warn/15 text-warn font-mono text-[10px] font-semibold tracking-wider rounded-sm">
+        LOCKED
+      </span>
     </div>
   );
 }
