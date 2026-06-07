@@ -29,7 +29,6 @@ export function StatusBar() {
         </span>
       )}
       <div className="flex-1" />
-      <span className="text-dim">v0.2.0</span>
     </footer>
   );
 }

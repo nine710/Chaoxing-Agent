@@ -56,7 +56,7 @@ function questionTypeLabel(type?: string): string {
 
 function excerpt(text?: string): string {
   if (!text) return "无题干";
-  return text.length > 72 ? `${text.slice(0, 72)}...` : text;
+  return text.length > 72 ? `${text.slice(0, 72)}…` : text;
 }
 
 function stepAnswer(step: TraceStep): string {

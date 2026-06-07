@@ -58,13 +58,12 @@ export function TopBar() {
     <header className="flex items-center h-14 px-5 border-b border-line bg-bg">
       <div className="flex items-baseline gap-[10px] mr-8">
         <span className="text-sm font-semibold text-fg">ChaoxingAgent</span>
-        <span className="font-mono text-[11px] text-dim">0.2.0</span>
       </div>
       <div className="w-px h-4 bg-line mr-8" />
       <div className="flex items-center gap-1 text-[12px] text-muted font-mono">
         <span className={conn.cls}>{conn.text}</span>
         {target && (
-          <span className="ml-3 text-dim">| 目标 {target.title || target.processName}</span>
+          <span className="ml-3 text-dim">目标 {target.title || target.processName}</span>
         )}
       </div>
       <div className="flex-1" />
@@ -73,7 +72,7 @@ export function TopBar() {
           <button
             onClick={handleStart}
             disabled={busy || connection === "已连接"}
-            className="inline-flex items-center h-[30px] px-3 rounded-md border border-accent bg-accent text-accent-fg text-[12.5px] font-medium transition-all duration-150 hover:bg-[#FBBF24] hover:border-[#FBBF24] disabled:opacity-50 active:translate-y-px"
+            className="inline-flex items-center h-[30px] px-3 rounded-md border border-accent bg-accent text-accent-fg text-[12.5px] font-medium transition-all duration-150 hover:bg-accent-hover hover:border-accent-hover disabled:opacity-50 active:translate-y-px"
           >
             启动
           </button>

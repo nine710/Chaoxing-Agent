@@ -21,8 +21,10 @@
   --fg-dim: #71717A;
   /* 强调色（单一） */
   --accent: #F59E0B;        /* 终端琥珀 */
+  --accent-hover: #FBBF24;  /* 同一琥珀色系，仅用于 hover */
   --accent-dim: rgba(245, 158, 11, 0.12);
   --accent-fg: #09090B;     /* 在 accent 上可读的深色 */
+  --log-bg: #050507;        /* 日志面板背景，不使用 Tailwind bg-black */
   /* 语义色（极克制） */
   --ok: #84CC16;
   --err: #EF4444;

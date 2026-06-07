@@ -107,7 +107,7 @@ export function Calibration() {
           <button
             onClick={launch}
             disabled={busy || isRunning}
-            className="inline-flex items-center h-8 px-3.5 rounded-md border border-accent bg-accent text-accent-fg text-[12.5px] font-medium transition-all duration-150 hover:bg-[#FBBF24] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center h-8 px-3.5 rounded-md border border-accent bg-accent text-accent-fg text-[12.5px] font-medium transition-all duration-150 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {busy ? "启动中" : isRunning ? "运行中不可改" : "启动向导"}
           </button>
@@ -123,26 +123,26 @@ export function Calibration() {
       <div className="bg-surface1 p-8">
         <SidebarBlock label="窗口绑定">
           <div className="font-mono text-[12px] text-ok mb-2">已绑定</div>
-          <KV k="process" v={target?.process_name ?? "—"} />
-          <KV k="pid" v={target?.pid?.toString() ?? "—"} />
-          <KV k="title" v={target?.title ?? "—"} />
+          <KV k="process" v={target?.process_name ?? "未绑定"} />
+          <KV k="pid" v={target?.pid?.toString() ?? "未绑定"} />
+          <KV k="title" v={target?.title ?? "未绑定"} />
         </SidebarBlock>
         <SidebarBlock label="视口">
           <div className="font-mono text-[12px] text-warn mb-2">已锁定</div>
           <KV k="x, y" v={
             calibration?.phone_viewport_in_client
               ? `${calibration.phone_viewport_in_client.x}, ${calibration.phone_viewport_in_client.y}`
-              : "—"
+              : "未标定"
           } />
           <KV k="w x h" v={
             calibration?.phone_viewport_in_client
               ? `${calibration.phone_viewport_in_client.width} x ${calibration.phone_viewport_in_client.height}`
-              : "—"
+              : "未标定"
           } />
           <KV k="ratio" v={
             calibration?.phone_viewport_ratio
               ? `${calibration.phone_viewport_ratio.width} x ${calibration.phone_viewport_ratio.height}`
-              : "—"
+              : "未标定"
           } />
         </SidebarBlock>
       </div>

@@ -11,7 +11,7 @@ export function Monitor() {
           实时画面
           <span className="font-mono text-[12px] text-muted ml-1.5">step {currentStep?.step ?? 0}</span>
           <span className="ml-auto font-mono text-[12px] text-muted">
-            <span className="text-accent mr-1.5">streaming</span>
+            <span className="text-accent mr-1.5">画面流</span>
             2.0 fps
           </span>
         </div>
@@ -38,7 +38,7 @@ export function Monitor() {
           </div>
           <div className="grid grid-cols-[1fr_auto] gap-2 py-1 text-[12px] first:pt-0">
             <span className="text-muted">page state</span>
-            <span className="font-mono text-fg">{currentStep?.question ? "question" : "—"}</span>
+            <span className="font-mono text-fg">{currentStep?.question ? "题目" : "未开始"}</span>
           </div>
           <div className="grid grid-cols-[1fr_auto] gap-2 py-1 text-[12px]">
             <span className="text-muted">题目数</span>
@@ -52,10 +52,10 @@ export function Monitor() {
           </div>
           <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-center py-1 text-[12px]">
             <span className="text-muted">solver</span>
-            <div className="w-10 h-0.5 bg-surface3 relative overflow-hidden rounded-sm">
-              <div
-                className="absolute left-0 top-0 bottom-0 bg-accent"
-                style={{ width: `${(currentStep?.confidence ?? 0) * 100}%` }}
+            <div className="w-10 h-[3px] relative rounded-sm border-t border-line-faint">
+              <span
+                className="absolute top-[-2px] h-[5px] w-px -translate-x-1/2 bg-accent"
+                style={{ left: `${Math.min(1, Math.max(0, currentStep?.confidence ?? 0)) * 100}%` }}
               />
             </div>
             <span className="font-mono text-accent min-w-[32px] text-right">
@@ -69,7 +69,7 @@ export function Monitor() {
           <div className="grid grid-cols-[1fr_auto] gap-2 py-1 text-[12px]">
             <span className="text-muted">选项</span>
             <span className="font-mono text-fg">
-              {currentStep?.answer?.join(" ") || "—"}
+              {currentStep?.answer?.join(" ") || "未选择"}
             </span>
           </div>
         </div>
@@ -83,7 +83,7 @@ export function Monitor() {
                 className="grid grid-cols-[auto_1fr_auto] gap-2 py-[6px] text-[12px] items-center border-t border-line-faint first:border-t-0"
               >
                 <span className="font-mono text-dim text-[11px]">#{s.step}</span>
-                <span className="font-mono font-semibold text-fg">{s.answer.join(" ") || "—"}</span>
+                <span className="font-mono font-semibold text-fg">{s.answer.join(" ") || "未选择"}</span>
                 <span className="font-mono text-[11px] text-dim">
                   {s.confidence.toFixed(2)}
                 </span>

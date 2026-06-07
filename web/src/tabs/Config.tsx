@@ -247,11 +247,8 @@ function ModelRow({ role, name, meta, onTest }: { role: "vision" | "solver"; nam
   const isVision = role === "vision";
   return (
     <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2.5 items-center p-2.5 bg-surface1 border border-line rounded">
-      <div
-        className="w-7 h-7 rounded grid place-items-center font-mono text-[11px] font-semibold text-fg"
-        style={{ background: isVision ? "#0EA5E9" : "#D97706" }}
-      >
-        {isVision ? "G" : "C"}
+      <div className="w-7 h-7 rounded grid place-items-center font-mono text-[11px] font-semibold text-accent bg-accent-dim border border-accent/30">
+        {isVision ? "视" : "答"}
       </div>
       <div>
         <div className="text-[13px] font-medium">{name}</div>

@@ -29,6 +29,13 @@ export function Logs() {
     return "text-dim";
   };
 
+  const lvlLabel = (lvl: string) => {
+    if (lvl === "INFO") return "INF";
+    if (lvl === "WARN") return "WRN";
+    if (lvl === "ERROR") return "ERR";
+    return "DBG";
+  };
+
   return (
     <div className="flex flex-col h-full p-4 max-w-[1200px] mx-auto w-full">
       <div className="text-[22px] font-semibold tracking-tight mb-1">日志</div>
@@ -78,7 +85,7 @@ export function Logs() {
 
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto bg-black border border-line rounded-lg p-4 font-mono text-[12px] leading-relaxed"
+        className="flex-1 overflow-auto bg-log border border-line rounded-lg p-4 font-mono text-[12px] leading-relaxed"
       >
         {filtered.length === 0 ? (
           <div className="text-dim">无日志</div>
@@ -86,7 +93,7 @@ export function Logs() {
           filtered.map((l, i) => (
             <div key={i} className="grid grid-cols-[100px_60px_1fr] gap-3 py-px">
               <span className="text-dim">{l.ts.slice(11, 23)}</span>
-              <span className={`font-semibold ${lvlClass(l.level)}`}>{l.level}</span>
+              <span className={`font-semibold ${lvlClass(l.level)}`}>{lvlLabel(l.level)}</span>
               <span className="text-fg break-all whitespace-pre-wrap">{l.message}</span>
             </div>
           ))
