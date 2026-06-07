@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================
+   ChaoxingAgent 设计系统 token
+   所有组件按 token 引用，禁止硬编码颜色 / 字号
+   ========================================================== */
+:root {
+  /* 画布 */
+  --bg: #09090B;            /* zinc-950 */
+  --surface-1: #0E0E11;
+  --surface-2: #16161A;
+  --surface-3: #1C1C21;
+  /* 分割线 */
+  --line: #27272A;
+  --line-faint: #1E1E22;
+  /* 文本 */
+  --fg: #FAFAFA;
+  --fg-muted: #A1A1AA;
+  --fg-dim: #71717A;
+  /* 强调色（单一） */
+  --accent: #F59E0B;        /* 终端琥珀 */
+  --accent-dim: rgba(245, 158, 11, 0.12);
+  --accent-fg: #09090B;     /* 在 accent 上可读的深色 */
+  /* 语义色（极克制） */
+  --ok: #84CC16;
+  --err: #EF4444;
+  --warn: #F59E0B;
+  --info: #38BDF8;
+  /* 字体 */
+  --sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'SF Mono', 'JetBrains Mono', monospace;
+}
+
+html, body, #root { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 数字、坐标、日志、代码块用 mono */
+code, pre, kbd, samp, .font-mono {
+  font-family: var(--mono);
+  font-feature-settings: 'tnum' 1;
+}
+
+/* 减弱 motion（a11y） */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer base {
+  * { border-color: var(--line); }
+}

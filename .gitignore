@@ -16,6 +16,12 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
-# ---- 真实环境配置（含密钥） ----
+# ---- 真实环境配置（含密钥 / 本地覆盖） ----
 config/.env
 config/.env.local
+config/config.json
+config/model_services.json
+
+# ---- Node / web 构建 ----
+node_modules/
+web/dist/
