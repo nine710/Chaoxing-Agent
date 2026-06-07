@@ -14,20 +14,27 @@ from typing import Iterable
 
 
 def _config_dir() -> Path:
-    return Path(__file__).parent.parent / "config"
+    """项目根的 config/ 目录。
+
+    chaoxing_agent/core/config_init.py 在项目根的 3 层子目录下：
+      chaoxing_agent/core/X.py  →  parent.parent.parent 才是项目根
+    """
+    return Path(__file__).parent.parent.parent / "config"
 
 
 _PAIRS: list[tuple[str, str]] = [
     ("config.json.example", "config.json"),
     ("model_services.json.example", "model_services.json"),
-    (".env.example", ".env"),
 ]
+
+_ENV_PAIR: tuple[str, str] = (".env.example", ".env")
 
 
 def init_config_files(force: bool = False) -> list[tuple[str, str]]:
-    """把缺失的（默认）真实文件从 example 复制。返回 (src, dst) 列表。
+    """把缺失的真实文件从 example 复制。返回 (src, dst) 列表。
 
-    `force=True` 时即使真实文件已存在也会覆盖。
+    `force=True` 时仅强制覆盖 JSON 配置；已有 `.env` 不覆盖，避免清空用户 API key。
+    如果 `.env` 缺失，则仍会从 `.env.example` 创建。
     """
     cfg_dir = _config_dir()
     out: list[tuple[str, str]] = []
@@ -41,6 +48,16 @@ def init_config_files(force: bool = False) -> list[tuple[str, str]]:
             continue
         shutil.copyfile(src, dst)
         out.append((str(src), str(dst)))
+
+    env_example, env_real = _ENV_PAIR
+    env_src = cfg_dir / env_example
+    env_dst = cfg_dir / env_real
+    if not env_src.exists():
+        raise FileNotFoundError(f"模板文件缺失: {env_src}")
+    if not env_dst.exists():
+        shutil.copyfile(env_src, env_dst)
+        out.append((str(env_src), str(env_dst)))
+
     return out
 
 

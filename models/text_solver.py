@@ -1,13 +1,13 @@
 """文本模型作答 — 题干+选项 → SolverResult"""
 
 import json
-import re
 from pathlib import Path
 
-from core.errors import PauseRequiredError, RecoverableError
-from models.google_client import GoogleClient
-from models.model_config import ModelConfig
-from models.openai_client import OpenAIClient
+from openai import APIConnectionError, APIStatusError, APITimeoutError, AuthenticationError, RateLimitError
+
+from chaoxing_agent.core.errors import PauseRequiredError, RecoverableError
+from models.json_extract import extract_all_json_objects, extract_first_json_object
+from models.model_config import ModelConfig, make_openai_client
 from schemas.solver_schema import SolverResult
 
 
@@ -19,36 +19,17 @@ def _load_prompt() -> str:
     return prompt_path.read_text(encoding="utf-8")
 
 
+def _extract_all_json(text: str) -> list[dict]:
+    """从模型返回文本中提取所有候选 JSON 对象，按出现顺序返回。"""
+    return extract_all_json_objects(text)
+
+
 def _extract_json(text: str) -> dict:
-    """从模型返回文本中提取 JSON"""
+    """从模型返回文本中提取第一个候选 JSON 对象。"""
     try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
-
-    m = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
-    if m:
-        try:
-            return json.loads(m.group(1))
-        except json.JSONDecodeError:
-            pass
-
-    depth = 0
-    start = -1
-    for i, ch in enumerate(text):
-        if ch == "{":
-            if depth == 0:
-                start = i
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            if depth == 0 and start >= 0:
-                try:
-                    return json.loads(text[start:i + 1])
-                except json.JSONDecodeError:
-                    continue
-
-    raise RecoverableError("无法从模型返回内容中提取 JSON")
+        return extract_first_json_object(text)
+    except ValueError as e:
+        raise RecoverableError("无法从模型返回内容中提取 JSON") from e
 
 
 def solve(question_type: str, question_text: str, options: dict[str, str], config: ModelConfig) -> SolverResult:
@@ -66,16 +47,31 @@ def solve(question_type: str, question_text: str, options: dict[str, str], confi
     ]
 
     if config.api_type == "openai":
-        client = OpenAIClient(config)
-    elif config.api_type == "google":
-        client = GoogleClient(config)
+        client = make_openai_client(config)
     else:
-        raise PauseRequiredError(f"不支持的 api_type: {config.api_type}")
-
-    raw_text = client.chat(messages)
-    raw_json = _extract_json(raw_text)
+        raise PauseRequiredError(f"不支持的 api_type: {config.api_type!r}（当前仅支持 'openai'）")
 
     try:
-        return SolverResult.model_validate(raw_json)
-    except Exception as e:
-        raise PauseRequiredError(f"文本模型返回 JSON 校验失败: {e}\n原始内容: {raw_text[:500]}") from e
+        raw_text = client.chat(messages)
+    except AuthenticationError as e:
+        raise PauseRequiredError(f"文本模型鉴权失败: {e}") from e
+    except (APIConnectionError, APITimeoutError, RateLimitError, APIStatusError) as e:
+        raise RecoverableError(f"文本模型调用失败 (可重试): {type(e).__name__}: {e}") from e
+
+    # 在所有候选 JSON 中挑出第一个能通过 schema 校验的。
+    # 避免把模型在文本里"举例"的内嵌 JSON 误当成顶层输出。
+    candidates = _extract_all_json(raw_text)
+    if not candidates:
+        raise PauseRequiredError(f"文本模型返回内容中无法提取 JSON\n原始内容: {raw_text[:500]}")
+
+    last_err: Exception | None = None
+    for cand in candidates:
+        try:
+            return SolverResult.model_validate(cand)
+        except Exception as e:
+            last_err = e
+            continue
+
+    raise PauseRequiredError(
+        f"文本模型返回 JSON 校验失败: {last_err}\n原始内容: {raw_text[:500]}"
+    ) from last_err

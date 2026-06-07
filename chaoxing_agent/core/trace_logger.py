@@ -16,36 +16,31 @@ class TraceLogger:
         print(f"[Trace] 日志目录: {self.session_dir}")
 
     def save_step(self, step_data: dict):
-        """保存一步的截图和 JSON"""
+        """保存一步的截图和 JSON。
+
+        注意：本方法不修改 ``step_data`` —— PIL Image 也不会出现在 JSON 中。
+        """
         step_num = step_data["step"]
         timestamp = datetime.now().isoformat()
 
         screenshot_filename = f"step_{step_num:03d}.png"
         screenshot_path = self.session_dir / screenshot_filename
-        img = step_data.pop("screenshot_img", None)
-        if img:
+        img = step_data.get("screenshot_img")
+        if img is not None:
             img.save(screenshot_path)
 
-        trace_entry = {
-            "step": step_num,
-            "timestamp": timestamp,
-            "screenshot": str(screenshot_path),
-            "page_state": step_data.get("page_state"),
-            "question_type": step_data.get("question_type"),
-            "question": step_data.get("question", ""),
-            "options": step_data.get("options"),
-            "vision_confidence": step_data.get("vision_confidence"),
-            "vision_raw_json": step_data.get("vision_raw_json"),
-            "solver_answer": step_data.get("solver_answer"),
-            "solver_confidence": step_data.get("solver_confidence"),
-            "solver_reason": step_data.get("solver_reason", ""),
-            "solver_raw_json": step_data.get("solver_raw_json"),
-            "clicked_options": step_data.get("clicked_options", []),
-            "next_button": step_data.get("next_button"),
-            "page_changed": step_data.get("page_changed"),
-            "page_change_ratio": step_data.get("page_change_ratio"),
-            "error": step_data.get("error"),
-        }
+        # Build JSON-safe view: omit PIL Image and other non-serializable fields.
+        json_safe_keys = (
+            "step", "page_state", "question_type", "question", "options",
+            "vision_confidence", "vision_raw_json", "solver_answer",
+            "solver_confidence", "solver_reason", "solver_raw_json",
+            "clicked_options", "next_button", "page_changed",
+            "page_change_ratio", "error",
+        )
+        trace_entry = {k: step_data.get(k) for k in json_safe_keys}
+        trace_entry["step"] = step_num
+        trace_entry["timestamp"] = timestamp
+        trace_entry["screenshot"] = str(screenshot_path)
 
         json_filename = f"step_{step_num:03d}.json"
         json_path = self.session_dir / json_filename

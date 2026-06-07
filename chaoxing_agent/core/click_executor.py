@@ -87,11 +87,24 @@ def click_at(x: int, y: int):
 
 
 def click_options(answers: list[str], options: list, mapper: CoordinateMapper, timing: dict):
-    """根据答案 key 依次点击对应选项。"""
+    """根据答案 key 依次点击对应选项。
+
+    若 ``answers`` 中任一 key 不在 ``options`` 里，立即抛 :class:`KeyError`
+    —— 这是 state_machine 答案校验的二次保护：state_machine 在调用本函数前
+    已经做了答案 → 选项的映射校验，这里再做一次以防 caller 跳过校验层。
+    """
     option_map = {opt.key: opt for opt in options}
+
+    # 二次校验：所有 answer 必须在 options 里
+    unknown = [a for a in answers if a not in option_map]
+    if unknown:
+        raise KeyError(
+            f"答案 key {unknown!r} 不在 options {list(option_map.keys())!r} 中"
+        )
 
     for i, answer_key in enumerate(answers):
         opt = option_map[answer_key]
+        mapper.refresh()
         sx, sy = mapper.box_center_screen(opt.box)
         print(f"  [点击选项 {answer_key}] 截图坐标: {opt.box} → 屏幕坐标: ({sx}, {sy})")
         click_at(sx, sy)
@@ -103,6 +116,7 @@ def click_options(answers: list[str], options: list, mapper: CoordinateMapper, t
 def click_next_button(box: list[int], mapper: CoordinateMapper, timing: dict):
     """点击下一题按钮（含前后等待）"""
     time.sleep(timing.get("before_click_next", 0.2))
+    mapper.refresh()
     sx, sy = mapper.box_center_screen(box)
     print(f"  [点击下一题] 截图坐标: {box} → 屏幕坐标: ({sx}, {sy})")
     click_at(sx, sy)

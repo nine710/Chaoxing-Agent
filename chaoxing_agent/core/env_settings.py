@@ -21,7 +21,8 @@ from dotenv import dotenv_values
 
 
 def _get_config_dir() -> Path:
-    return Path(__file__).parent.parent / "config"
+    """项目根的 config/ 目录。"""
+    return Path(__file__).parent.parent.parent / "config"
 
 
 # ---------------------------------------------------------------------------

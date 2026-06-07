@@ -2,6 +2,7 @@
 
 from typing import Literal, Optional
 
+import pydantic
 from pydantic import BaseModel, Field
 
 
@@ -13,8 +14,14 @@ class VisionOption(BaseModel):
 
 class VisionButton(BaseModel):
     visible: bool
-    text: str = ""
+    text: Optional[str] = ""
     box: Optional[list[int]] = None
+
+    @pydantic.field_validator("text", mode="before")
+    @classmethod
+    def _empty_text(cls, v):
+        """LLM 经常把"无值"输出成 null，这里统一把 None 归一为 ""。"""
+        return "" if v is None else v
 
 
 class VisionButtons(BaseModel):
@@ -25,8 +32,13 @@ class VisionButtons(BaseModel):
 
 class VisionPopup(BaseModel):
     visible: bool = False
-    text: str = ""
+    text: Optional[str] = ""
     buttons: list = Field(default_factory=list)
+
+    @pydantic.field_validator("text", mode="before")
+    @classmethod
+    def _empty_text(cls, v):
+        return "" if v is None else v
 
 
 class VisionConfidence(BaseModel):

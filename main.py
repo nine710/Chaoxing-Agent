@@ -8,8 +8,8 @@
 环境配置:
     config/.env 仅用于模型服务相关项:
       - 模型 API key（由 model_services.json 的 api_key_env 指向）
-      - 选中的模型：CHAOXING_MODEL_VISION_KEY / CHAOXING_MODEL_SOLVER_KEY
-      - provider 字段覆盖：CHAOXING_VISION_<KEY>_<FIELD> / CHAOXING_SOLVER_<KEY>_<FIELD>
+      - provider 字段覆盖：CHAOXING_VISION_<FIELD> / CHAOXING_SOLVER_<FIELD>
+        其中 <FIELD> 可为 BASE_URL / MODEL_ID / API_KEY_ENV / API_TYPE
     其它运行时/标定参数在 config/config.json 中维护。
     真实 config.json / model_services.json 已被 .gitignore 排除，
     首次运行会自动从 *.example 复制。
@@ -73,7 +73,6 @@ def _default_config() -> dict:
         },
         "runtime": {
             "max_steps": 200,
-            "stop_on_submit": True,
             "pause_on_popup": True,
             "pause_on_unknown": True,
             "save_trace": True,
@@ -117,13 +116,8 @@ def _resolve_preconfigured_target(target: dict) -> dict | None:
     if not (pid or process_name):
         return None
 
-    # 把所有非空信息合成一个选择串
-    if pid and process_name:
-        user_input = str(pid)
-    elif pid:
-        user_input = str(pid)
-    else:
-        user_input = process_name
+    # 优先使用 pid（更精确）；没有 pid 才退到进程名
+    user_input = str(pid) if pid else process_name
 
     try:
         win_info = select_window_fn(user_input)
@@ -273,6 +267,7 @@ def main():
     config = _load_or_create_config()
 
     print("\n" + "=" * 50)
+    sm = None
     try:
         sm = StateMachine(config, model_services)
         sm.run()
@@ -284,8 +279,14 @@ def main():
     except Exception as e:
         print(f"\n[FATAL] 未预期的错误: {e}")
         import traceback
-
         traceback.print_exc()
+        # 保存 trace 现场 — 让事后能复盘
+        if sm is not None and hasattr(sm, "trace_logger"):
+            try:
+                sm.trace_logger.save_stop(f"未预期异常: {type(e).__name__}: {e}")
+                print(f"[Trace] 现场已保存: {sm.trace_logger.session_dir}")
+            except Exception:
+                pass
         sys.exit(1)
 
 

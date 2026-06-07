@@ -24,6 +24,14 @@ class StepResult:
     advance_step: bool = False
 
 
+def _box_in_image(box: list[int], width: int, height: int) -> bool:
+    """判断视觉模型返回的 box 是否完全位于截图内。"""
+    if len(box) != 4:
+        return False
+    x1, y1, x2, y2 = box
+    return 0 <= x1 < x2 <= width and 0 <= y1 < y2 <= height
+
+
 class StateMachine:
     """主循环状态机。"""
 
@@ -120,8 +128,15 @@ class StateMachine:
             self.expected_client_rect,
             self.thresholds.get("window_size_change_ratio", 0.05),
         ):
-            pause_result = self._pause("窗口尺寸已变化，请重新标定手机画面区域")
-            return StepResult(advance_step=pause_result == "skip")
+            # 窗口尺寸变了 —— 重试同一 step 没有意义（截屏区域不再匹配 viewport），
+            # 默认升级为 FatalStop 让人重新标定；用户可输入 'skip' 强制继续。
+            pause_result = self._pause(
+                f"窗口尺寸已变化（>{self.thresholds.get('window_size_change_ratio', 0.05):.0%}），"
+                f"请重新标定手机画面区域。输入 skip 继续 / quit 退出。"
+            )
+            if pause_result != "skip":
+                raise FatalStopError("窗口尺寸已变化，需要重新标定")
+            return StepResult(advance_step=True)
 
         screenshot = capture_phone_screen(self.hwnd, self.viewport)
         print(f"  截图: {screenshot.width}x{screenshot.height}")
@@ -166,6 +181,23 @@ class StateMachine:
 
         if not vision.buttons.next.visible or not vision.buttons.next.box:
             return self._pause_save(screenshot, vision, None, "未识别到下一题按钮")
+
+        for opt in vision.options:
+            if not _box_in_image(opt.box, screenshot.width, screenshot.height):
+                return self._pause_save(
+                    screenshot,
+                    vision,
+                    None,
+                    f"选项 {opt.key} 坐标越界: {opt.box}，截图尺寸={screenshot.width}x{screenshot.height}",
+                )
+
+        if not _box_in_image(vision.buttons.next.box, screenshot.width, screenshot.height):
+            return self._pause_save(
+                screenshot,
+                vision,
+                None,
+                f"下一题按钮坐标越界: {vision.buttons.next.box}，截图尺寸={screenshot.width}x{screenshot.height}",
+            )
 
         opts_dict = {opt.key: opt.text for opt in vision.options}
         print(f"  题干: {vision.question_text[:80]}...")
