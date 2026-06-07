@@ -36,7 +36,7 @@ export function PauseOverlay() {
         <div className="flex gap-2 justify-end">
           <button
             onClick={() => decide("retry")}
-            className="inline-flex items-center h-8 px-3 rounded-md border border-accent bg-accent text-accent-fg text-[12px] font-medium hover:bg-[#FBBF24]"
+            className="inline-flex items-center h-8 px-3 rounded-md border border-accent bg-accent text-accent-fg text-[12px] font-medium hover:bg-accent-hover"
           >
             重试（R）
           </button>
