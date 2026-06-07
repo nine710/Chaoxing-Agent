@@ -217,16 +217,82 @@ async def test_get_model_services_returns_dict(ctx):
 
 
 # =========================================================================
-# switch_model / test_model require modifications — skip by default
+# switch_model / test_model
 # =========================================================================
 
-@pytest.mark.skip(reason="需要真实的 model_services.json + 可配置 mock")
-@pytest.mark.asyncio
-async def test_switch_model(ctx):
-    pass
+
+def test_test_model_uses_openai_client_chat_contract(ctx, monkeypatch):
+    """模型测试应调用 OpenAIClient.chat，而不是不存在的 client.client。"""
+    h = make_handlers(ctx)["test_model"]
+    fake_services = {
+        "vision": {
+            "api_type": "openai",
+            "base_url": "https://example.test/v1",
+            "api_key_env": "VISION_API_KEY",
+            "model_id": "test-model",
+        }
+    }
+    fake_client = MagicMock()
+    fake_client.chat.return_value = "ok"
+
+    monkeypatch.setenv("VISION_API_KEY", "test-key")
+    monkeypatch.setattr("chaoxing_agent.rpc_handlers._read_model_services", lambda: fake_services)
+    monkeypatch.setattr("models.model_config.make_openai_client", lambda cfg: fake_client)
+
+    result = asyncio.run(h({"role": "vision", "key": ""}))
+
+    assert result["ok"] is True
+    assert isinstance(result["latency_ms"], int)
+    assert result["error"] is None
+    fake_client.chat.assert_called_once()
 
 
-@pytest.mark.skip(reason="需要真实的 model_services.json + API key")
-@pytest.mark.asyncio
-async def test_test_model(ctx):
-    pass
+def test_switch_model_rejects_flat_provider_shape(ctx, monkeypatch):
+    """flat 单 provider 结构没有可切换 provider key，不能返回假成功。"""
+    h = make_handlers(ctx)["switch_model"]
+    fake_services = {
+        "vision": {
+            "api_type": "openai",
+            "base_url": "https://example.test/v1",
+            "api_key_env": "VISION_API_KEY",
+            "model_id": "test-model",
+        }
+    }
+
+    monkeypatch.setattr("chaoxing_agent.rpc_handlers._read_model_services", lambda: fake_services)
+
+    with pytest.raises(ValueError, match="单 provider"):
+        asyncio.run(h({"role": "vision", "key": "other"}))
+
+
+def test_switch_model_writes_selected_model_key_for_registry(ctx, monkeypatch):
+    """多 provider 注册表结构应写 selected.<role>_model，供运行时 loader 和前端共用。"""
+    class FakeRpc:
+        async def emit(self, event, data):
+            self.event = event
+            self.data = data
+
+    ctx.rpc = FakeRpc()
+    h = make_handlers(ctx)["switch_model"]
+    fake_services = {
+        "selected": {},
+        "vision": {
+            "gemini": {
+                "api_type": "openai",
+                "base_url": "https://example.test/v1",
+                "api_key_env": "VISION_API_KEY",
+                "model_id": "gemini-2.5-flash",
+            }
+        },
+    }
+    written = {}
+
+    monkeypatch.setattr("chaoxing_agent.rpc_handlers._read_model_services", lambda: fake_services)
+    monkeypatch.setattr("chaoxing_agent.rpc_handlers._write_model_services", lambda data: written.update(data))
+
+    result = asyncio.run(h({"role": "vision", "key": "gemini"}))
+
+    assert result == {"ok": True}
+    assert written["selected"]["vision_model"] == "gemini"
+    assert written["selected"]["vision"] == "gemini"  # 兼容旧字段
+    assert ctx.rpc.event == "config_changed"
