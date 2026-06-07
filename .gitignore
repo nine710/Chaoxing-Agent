@@ -1,3 +1,6 @@
+# 测试
+tests/images
+
 # ---- 编辑器 / 工具链 / 虚拟环境 ----
 .claude/
 .venv/
@@ -7,6 +10,7 @@
 # ---- 运行时输出 ----
 trace/
 docs/superpowers/
+.ui-preview/
 
 # ---- Python 编译产物 ----
 __pycache__/
@@ -25,3 +29,7 @@ config/model_services.json
 # ---- Node / web 构建 ----
 node_modules/
 web/dist/
+
+# ---- 临时基准脚本 / 本地设计稿（不入库） ----
+test.py
+design-system/
