@@ -1,11 +1,21 @@
+# ---- 编辑器 / 工具链 / 虚拟环境 ----
 .claude/
 .venv/
+.vscode/
+.idea/
+
+# ---- 运行时输出 ----
 trace/
+docs/superpowers/
+
+# ---- Python 编译产物 ----
 __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-*.png
-test_*.png
+
+# ---- 真实环境配置（含密钥） ----
+config/.env
+config/.env.local
