@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::process::{Child, ChildStdin, ChildStdout};
-use tokio::sync::{mpsc, Mutex};
+use tokio::process::{ChildStdin, ChildStdout};
+use tokio::sync::Mutex;
 
 /// One NDJSON message from Python to Rust.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,25 +29,22 @@ pub struct RpcErrorBody {
 pub struct RpcBridge {
     app: AppHandle,
     stdin: Mutex<Option<ChildStdin>>,
-    #[allow(dead_code)]
-    line_tx: mpsc::UnboundedSender<String>,
-    pending: Arc<Mutex<HashMap<u64, tokio::sync::oneshot::Sender<Value>>>>,
+    /// Outstanding RPC requests awaiting a Response. The sender yields the
+    /// `Result<Value, RpcErrorBody>` straight from Python (Ok) or (Err) so
+    /// `request()` can convert to `Result<Value, String>` for the Tauri side
+    /// without smuggling error bodies through the success channel.
+    pending: Arc<Mutex<HashMap<u64, tokio::sync::oneshot::Sender<RpcResult>>>>,
     next_id: Mutex<u64>,
 }
 
+/// 内部 RPC 响应形态：`Ok(Value)` 是 Python 返回值，`Err(RpcErrorBody)` 是 Python 错误。
+type RpcResult = Result<Value, RpcErrorBody>;
+
 impl RpcBridge {
     pub fn new(app: AppHandle) -> Arc<Self> {
-        let (tx, mut rx) = mpsc::unbounded_channel::<String>();
-        // 派一个 task 处理 stdin writer
-        tokio::spawn(async move {
-            while let Some(_line) = rx.recv().await {
-                log::debug!("(stdin queue) {}", _line);
-            }
-        });
         Arc::new(Self {
             app,
             stdin: Mutex::new(None),
-            line_tx: tx,
             pending: Arc::new(Mutex::new(HashMap::new())),
             next_id: Mutex::new(1),
         })
@@ -74,16 +71,16 @@ impl RpcBridge {
     async fn handle_inbound(
         app: AppHandle,
         msg: RpcMessage,
-        pending: Arc<Mutex<HashMap<u64, tokio::sync::oneshot::Sender<Value>>>>,
+        pending: Arc<Mutex<HashMap<u64, tokio::sync::oneshot::Sender<RpcResult>>>>,
     ) {
         match msg {
             RpcMessage::Event { event, data } => {
                 log::debug!("emit to frontend: {} {:?}", event, data);
-                let _ = app.emit(event, data);
+                let _ = app.emit(&event, data);
             }
             RpcMessage::Response { id, result } => {
                 if let Some(tx) = pending.lock().await.remove(&id) {
-                    let _ = tx.send(result);
+                    let _ = tx.send(Ok(result));
                 }
             }
             RpcMessage::Error { id, error } => {
@@ -94,14 +91,9 @@ impl RpcBridge {
                     error.message
                 );
                 if let Some(tx) = pending.lock().await.remove(&id) {
-                    // 序列化成 Value 给前端，错误也作为 result 返回
-                    let _ = tx.send(serde_json::json!({
-                        "error": {
-                            "code": error.code,
-                            "message": error.message,
-                            "detail": error.detail,
-                        }
-                    }));
+                    // 直接把错误送给 request()，由它把 RpcErrorBody 序列化成 String。
+                    // 这样 Tauri 命令侧 Result<Value, String> 的 Err 分支能正确反映 Python 错误。
+                    let _ = tx.send(Err(error));
                 }
             }
             RpcMessage::Request { .. } => {
@@ -136,7 +128,9 @@ impl RpcBridge {
             .map_err(|e| e.to_string())?;
         stdin.flush().await.map_err(|e| e.to_string())?;
 
-        let result = rx.await.map_err(|_| "response channel closed".to_string())?;
-        Ok(result)
+        match rx.await.map_err(|_| "response channel closed".to_string())? {
+            Ok(value) => Ok(value),
+            Err(body) => Err(serde_json::to_string(&body).unwrap_or_else(|_| body.message)),
+        }
     }
 }

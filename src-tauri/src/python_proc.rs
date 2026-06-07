@@ -1,7 +1,7 @@
 use std::process::Stdio;
 use std::sync::Arc;
-use tauri::AppHandle;
-use tokio::io::BufReader;
+use tauri::{AppHandle, Emitter};
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::Mutex;
 
@@ -67,7 +67,7 @@ impl PythonProc {
                     serde_json::json!({
                         "level": "INFO",
                         "message": line,
-                        "ts": chrono_now(),
+                        "ts": unix_secs_now(),
                     }),
                 );
             }
@@ -103,7 +103,7 @@ impl PythonProc {
     }
 }
 
-fn chrono_now() -> String {
+fn unix_secs_now() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)

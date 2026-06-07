@@ -1,21 +1,47 @@
-# ChaoxingAgent v1
+# ChaoxingAgent
 
-Windows 本地自动化答题工具。
+Windows 本地自动化答题工具 — Python 内核（截图 / 视觉 / 点击 / 状态机）+ Tauri 2 桌面壳 + React 前端。
+
+## 两种运行方式
+
+### A. 桌面壳（Tauri 2）— 完整体验
+
+```bash
+# 一次性：装 Python 依赖
+uv venv && uv pip install -r requirements.txt
+
+# 初始化本地配置
+uv run python main.py --init-config
+
+# 起桌面壳（自动 beforeDevCommand 拉 vite dev server）
+cd src-tauri && cargo tauri dev
+```
+
+### B. 纯 Python（无 UI，调试快）
+
+```bash
+uv venv && uv pip install -r requirements.txt
+uv run python main.py --init-config
+uv run python main.py
+```
 
 ## 功能
 
-- 手动框选手机画面区域
+- 手动框选手机画面区域（标定向导）
 - 视觉模型解析题目结构（题干 / 选项 / 按钮位置）
 - 文本模型作答
 - 自动点击选项和下一题
 - 遇到交卷按钮自动停止
 - 完整 trace 日志（每步截图 + JSON）
+- Tauri 2 桌面壳：原生窗口 + 配置 / 监控 / 日志 / 历史 / 标定 5 个 tab
 
 ## 环境要求
 
-- Windows 10+
+- Windows 10+（用 `pywin32` 操控窗口和点击）
 - Python 3.10+
 - [uv](https://github.com/astral-sh/uv)
+- Rust toolchain（仅 Tauri 壳需要；见 `src-tauri/Cargo.toml::rust-version`）
+- Node.js ≥ 18（仅前端 build 需要）
 
 ## 快速开始
 
@@ -36,8 +62,11 @@ uv run python main.py --init-env      # 重新生成 config/.env.example
 #    config/model_services.json 视觉 + 文本模型服务商配置
 #    config/.env                模型 API key（不入库）
 
-# 5. 运行
+# 5a. 仅跑 Python（不开 UI）
 uv run python main.py
+
+# 5b. 跑 Tauri 桌面壳（需要先有 Rust + Node）
+cd src-tauri && cargo tauri dev
 ```
 
 ## 配置说明
@@ -66,9 +95,18 @@ uv run python main.py
 
 | 命令 | 作用 |
 |------|------|
-| `uv run python main.py` | 启动主程序（首次会自动复制本地配置） |
+| `uv run python main.py` | 启动 Python 主程序（首次会自动复制本地配置） |
 | `uv run python main.py --init-config` | 强制从 example 覆盖 `config.json` / `model_services.json`（不会覆盖已有 `config/.env`） |
 | `uv run python main.py --init-env` | 重新生成 `config/.env.example` |
+| `uv run python -m chaoxing_agent --rpc` | 启动 RPC 子进程（被 Tauri 壳调用） |
+| `cd src-tauri && cargo tauri dev` | Tauri 桌面壳开发模式（自动跑 vite dev） |
+| `cd src-tauri && cargo tauri build` | Tauri release 构建（自动跑 vite build + bundle） |
+
+## 架构 / 运维
+
+- 整体设计 + NDJSON 协议：见 `docs/architecture.md`
+- 故障排查 / 冒烟测试：见 `docs/runbook.md`
+- 外部集成（写新 host 接入 RPC）：见 `docs/integration-guide.md`
 
 ## 免责声明
 

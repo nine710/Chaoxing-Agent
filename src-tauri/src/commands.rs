@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use tauri::State;
 
 use crate::app_state::AppState;
@@ -33,7 +32,7 @@ pub async fn stop_python(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let mut guard = state.python.lock().await;
-    if let Some(mut proc) = guard.take() {
+    if let Some(proc) = guard.take() {
         proc.stop().await?;
     }
     Ok(())

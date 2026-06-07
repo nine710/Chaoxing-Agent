@@ -3,16 +3,10 @@ mod commands;
 mod python_proc;
 mod rpc_bridge;
 
-use std::sync::Arc;
 use tauri::Manager;
 
 use crate::app_state::AppState;
 use crate::rpc_bridge::RpcBridge;
-
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -34,7 +28,6 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            greet,
             commands::start_python,
             commands::stop_python,
             commands::rpc_call,

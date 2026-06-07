@@ -30,6 +30,15 @@ config/model_services.json
 node_modules/
 web/dist/
 
+# ---- Rust / Tauri 构建产物 ----
+# Cargo.lock 不入库（项目惯例，见 5edaeb9）；target 是 cargo build 产物；
+# gen/ 是 `tauri build` 自动生成的 schema / capabilities 目录。
+src-tauri/target/
+src-tauri/gen/
+src-tauri/Cargo.lock
+# 临时占位图标（仅 766 字节的 .ico placeholder，等正式设计稿替换）
+src-tauri/icons/icon.ico
+
 # ---- 临时基准脚本 / 本地设计稿（不入库） ----
 test.py
 design-system/
