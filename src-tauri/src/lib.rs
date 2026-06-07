@@ -1,3 +1,14 @@
+mod app_state;
+mod commands;
+mod python_proc;
+mod rpc_bridge;
+
+use std::sync::Arc;
+use tauri::Manager;
+
+use crate::app_state::AppState;
+use crate::rpc_bridge::RpcBridge;
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -6,12 +17,28 @@ fn greet(name: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|_app, _argv, _cwd| {
-            // TODO: focus existing window on second instance
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+            }
         }))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .setup(|app| {
+            let handle = app.handle().clone();
+            let rpc = RpcBridge::new(handle);
+            app.manage(AppState {
+                rpc: rpc.clone(),
+                python: tokio::sync::Mutex::new(None),
+            });
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            commands::start_python,
+            commands::stop_python,
+            commands::rpc_call,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
