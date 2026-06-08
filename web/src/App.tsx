@@ -4,7 +4,7 @@ import { TabRail } from "./components/TabRail";
 import { StatusBar } from "./components/StatusBar";
 import { PauseOverlay } from "./components/PauseOverlay";
 import { useAppStore } from "./lib/store";
-import { events } from "./lib/tauri-bridge";
+import { events, startPython } from "./lib/tauri-bridge";
 import { Monitor } from "./tabs/Monitor";
 import { Calibration } from "./tabs/Calibration";
 import { Config } from "./tabs/Config";
@@ -25,6 +25,14 @@ export default function App() {
   } = useAppStore();
 
   useEffect(() => {
+    setConnection("连接中");
+    startPython()
+      .then(() => setConnection("已连接"))
+      .catch((error) => {
+        console.error("startPython on app mount failed", error);
+        setConnection("已崩溃");
+      });
+
     const unlistens: Array<() => void> = [];
 
     events

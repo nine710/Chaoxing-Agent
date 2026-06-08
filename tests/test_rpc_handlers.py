@@ -19,8 +19,9 @@ from chaoxing_agent.config_holder import ConfigHolder
 # =========================================================================
 
 @pytest.fixture
-def ctx(tmp_path: Path) -> HandlerContext:
+def ctx(tmp_path: Path, monkeypatch) -> HandlerContext:
     """标准 HandlerContext，config 写 tmp_path 隔离。"""
+    monkeypatch.chdir(tmp_path)
     config = ConfigHolder(
         {
             "timing": {"a": 1.0},

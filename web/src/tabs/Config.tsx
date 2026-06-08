@@ -37,6 +37,7 @@ export function Config() {
   const [services, setServices] = useState<ModelServices | null>(null);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   useEffect(() => {
@@ -44,8 +45,13 @@ export function Config() {
       .then(([c, s]) => {
         setCfg(c);
         setServices(s);
+        setError(null);
       })
-      .catch((e) => setToast({ kind: "err", text: String(e) }));
+      .catch((e) => {
+        const message = String(e);
+        setError(message);
+        setToast({ kind: "err", text: message });
+      });
   }, []);
 
   function patch<T extends keyof Config>(key: T, value: Config[T]) {
@@ -100,6 +106,19 @@ export function Config() {
   }
 
   if (!cfg) {
+    if (error) {
+      return (
+        <div className="p-8">
+          <div className="text-err text-[13px] font-mono mb-3">配置加载失败：{error}</div>
+          <button
+            onClick={() => window.location.reload()}
+            className="h-7 px-3 rounded border border-line bg-bg text-fg text-[12px] hover:bg-surface2 active:-translate-y-px"
+          >
+            重试
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="p-8 text-dim text-[13px]">加载配置中</div>
     );
