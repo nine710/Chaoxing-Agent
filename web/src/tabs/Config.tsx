@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/tauri-bridge";
+import { useAppStore } from "../lib/store";
 
 type Config = {
   thresholds?: { vision_text_confidence?: number; vision_layout_confidence?: number; solver_confidence?: number };
@@ -33,18 +34,36 @@ function activeModel(section: Record<string, ModelService> | ModelService | unde
 }
 
 export function Config() {
-  const [cfg, setCfg] = useState<Config | null>(null);
-  const [services, setServices] = useState<ModelServices | null>(null);
+  const { configData, setConfigData, modelServices, setModelServices } = useAppStore();
+  const [cfg, setCfg] = useState<Config | null>((configData as Config | null) ?? null);
+  const [services, setServices] = useState<ModelServices | null>((modelServices as ModelServices | null) ?? null);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   useEffect(() => {
+    if (configData) {
+      setCfg(configData as Config);
+    }
+  }, [configData]);
+
+  useEffect(() => {
+    if (modelServices) {
+      setServices(modelServices as ModelServices);
+    }
+  }, [modelServices]);
+
+  useEffect(() => {
+    if (cfg || services) {
+      return;
+    }
     Promise.all([api.getConfig() as Promise<Config>, api.getModelServices() as Promise<ModelServices>])
       .then(([c, s]) => {
         setCfg(c);
         setServices(s);
+        setConfigData(c as Record<string, unknown>);
+        setModelServices(s as Record<string, unknown>);
         setError(null);
       })
       .catch((e) => {
@@ -52,7 +71,7 @@ export function Config() {
         setError(message);
         setToast({ kind: "err", text: message });
       });
-  }, []);
+  }, [cfg, services, setConfigData, setModelServices]);
 
   function patch<T extends keyof Config>(key: T, value: Config[T]) {
     if (!cfg) return;
@@ -87,6 +106,7 @@ export function Config() {
         timing: cfg.timing,
         runtime: cfg.runtime,
       });
+      setConfigData(cfg as Record<string, unknown>);
       setDirty(false);
       setToast({ kind: "ok", text: `已保存（热更字段：${result.hot_fields.join("、") || "无"}）` });
       setTimeout(() => setToast(null), 3000);
@@ -101,6 +121,7 @@ export function Config() {
     if (!cfg) return;
     api.getConfig().then((c) => {
       setCfg(c);
+      setConfigData(c as Record<string, unknown>);
       setDirty(false);
     });
   }

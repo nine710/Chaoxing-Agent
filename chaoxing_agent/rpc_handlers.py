@@ -219,12 +219,17 @@ def _stop_run(ctx: HandlerContext) -> Handler:
         sm = ctx.state.get("sm")
         if sm:
             sm.request_stop()
+        if ctx.pause_gate.is_pending():
+            ctx.pause_gate.resolve("quit")
         task = ctx.state.get("sm_task")
-        if task:
+        if task and not task.done():
+            task.cancel()
             try:
-                await asyncio.wait_for(task, timeout=3.0)
-            except asyncio.TimeoutError:
-                task.cancel()
+                await asyncio.wait_for(asyncio.shield(task), timeout=0.2)
+            except (asyncio.TimeoutError, asyncio.CancelledError):
+                pass
+        ctx.state.pop("sm", None)
+        ctx.state.pop("sm_task", None)
         return {"stopped_at_step": sm.step if sm else 0}
     return handler
 

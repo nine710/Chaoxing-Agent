@@ -139,6 +139,68 @@ async def test_pause_decision_resolves_gate(ctx):
 
 
 # =========================================================================
+# stop_run
+# =========================================================================
+
+
+@pytest.mark.asyncio
+async def test_stop_run_returns_promptly_for_pending_task(ctx):
+    class FakeStateMachine:
+        def __init__(self):
+            self.step = 7
+            self.stop_requested = False
+
+        def request_stop(self):
+            self.stop_requested = True
+
+    blocker = asyncio.Event()
+
+    async def never_finishes():
+        await blocker.wait()
+
+    sm = FakeStateMachine()
+    task = asyncio.create_task(never_finishes())
+    ctx.state["sm"] = sm
+    ctx.state["sm_task"] = task
+
+    h = make_handlers(ctx)["stop_run"]
+    result = await asyncio.wait_for(h({}), timeout=0.2)
+
+    assert result == {"stopped_at_step": 7}
+    assert sm.stop_requested is True
+    assert task.cancelled() or task.cancelling() > 0
+
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+
+@pytest.mark.asyncio
+async def test_stop_run_releases_pending_pause_gate(ctx):
+    class FakeStateMachine:
+        def __init__(self):
+            self.step = 3
+            self.stop_requested = False
+
+        def request_stop(self):
+            self.stop_requested = True
+
+    wait_task = asyncio.create_task(ctx.pause_gate.wait(3, "paused"))
+    await asyncio.sleep(0.01)
+
+    sm = FakeStateMachine()
+    ctx.state["sm"] = sm
+    ctx.state["sm_task"] = asyncio.create_task(asyncio.sleep(10))
+
+    h = make_handlers(ctx)["stop_run"]
+    await asyncio.wait_for(h({}), timeout=0.2)
+
+    decision = await asyncio.wait_for(wait_task, timeout=1.0)
+    assert decision == "quit"
+    assert sm.stop_requested is True
+
+
+# =========================================================================
 # list_windows — sanity (mock 掉 enumerate_visible_windows)
 # =========================================================================
 
